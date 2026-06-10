@@ -1,0 +1,6 @@
+I2C_SDA  = 12
+I2C_SCL  = 13
+ENC_A    = 18
+ENC_B    = 17
+ENC_BTN  = 5
+MODE_BTN = 21
