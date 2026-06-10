@@ -10,9 +10,9 @@ from pins import I2S_SCK, I2S_WS, I2S_SD
 is_playing = False
 volume = 15
 
-IBUF_SIZE = 32_768
-CHUNK_SIZE = 6144
-BUFFER_COUNT = 3
+IBUF_SIZE = 49_152
+CHUNK_SIZE = 8192
+BUFFER_COUNT = 4
 
 _filename = None
 _file = None
@@ -27,6 +27,10 @@ _filled_count = 0
 
 _thread_started = False
 _lock = _thread.allocate_lock()
+
+underruns = 0
+min_free = 999999
+memory_errors = 0
 
 
 def _i2s_format(channels):
@@ -63,7 +67,6 @@ def _close_current():
     is_playing = False
     _bytes_left_to_read = 0
     _reset_buffers()
-    gc.enable()
 
     if _i2s is not None:
         _i2s.deinit()
@@ -78,10 +81,15 @@ def _close_current():
 
 def _load(filename):
     global _filename, _file, _i2s, _bytes_left_to_read
+    global underruns, min_free, memory_errors
 
     if filename is None:
         print("No song selected")
         return False
+
+    underruns = 0
+    min_free = gc.mem_free()
+    memory_errors = 0
 
     info = sd.read_wav_info(filename)
     if info["audio_format"] != 1:
@@ -115,8 +123,15 @@ def _load(filename):
     return True
 
 
+def _start_thread():
+    global _thread_started
+    if not _thread_started:
+        _thread.start_new_thread(_audio_thread, ())
+        _thread_started = True
+
+
 def _fill_one_buffer():
-    global _bytes_left_to_read, _filled_count
+    global _bytes_left_to_read, _filled_count, min_free, memory_errors
 
     _lock.acquire()
     try:
@@ -130,10 +145,24 @@ def _fill_one_buffer():
         max_read = CHUNK_SIZE
         if _bytes_left_to_read < max_read:
             max_read = _bytes_left_to_read
+        if max_read == CHUNK_SIZE:
+            read_view = _views[index]
+        else:
+            read_view = _views[index][:max_read]
     finally:
         _lock.release()
 
-    n = file_obj.readinto(_views[index][:max_read])
+    free = gc.mem_free()
+    if free < min_free:
+        min_free = free
+
+    try:
+        n = file_obj.readinto(read_view)
+    except MemoryError:
+        memory_errors += 1
+        gc.collect()
+        n = file_obj.readinto(read_view)
+
     if n is None:
         n = max_read
 
@@ -154,33 +183,27 @@ def _fill_one_buffer():
 
 
 def play(filename):
-    global is_playing, _thread_started
-
-    resume_only = False
-    loaded = True
+    global is_playing
 
     _lock.acquire()
     try:
-        if filename == _filename and _file is not None:
-            resume_only = True
-        else:
-            _close_current()
-            loaded = _load(filename)
+        _start_thread()
+        same_file = filename == _filename and _file is not None
+        if same_file:
+            is_playing = True
+            print("RESUME", filename)
+            return
 
-        if not _thread_started:
-            _thread.start_new_thread(_audio_thread, ())
-            _thread_started = True
+        _close_current()
+        loaded = _load(filename)
     finally:
         _lock.release()
 
     if not loaded:
         return
 
-    if not resume_only:
-        gc.collect()
-        update()
-
-    gc.disable()
+    gc.collect()
+    update(4)
 
     _lock.acquire()
     try:
@@ -188,19 +211,16 @@ def play(filename):
     finally:
         _lock.release()
 
-    if resume_only:
-        print("RESUME", filename)
-
 
 def pause():
     global is_playing
     _lock.acquire()
     try:
         is_playing = False
-        gc.enable()
     finally:
         _lock.release()
     print("PAUSE")
+    stats()
 
 
 def stop():
@@ -214,15 +234,21 @@ def stop():
         print("STOP", old_filename)
 
 
-def update():
-    while _fill_one_buffer():
-        pass
+def update(max_buffers=2):
+    for _ in range(max_buffers):
+        if not _fill_one_buffer():
+            break
 
 
 def _write_all(i2s_obj, view, length):
     written = 0
     while written < length:
-        count = i2s_obj.write(view[written:length])
+        if written == 0 and length == CHUNK_SIZE:
+            write_view = view
+        else:
+            write_view = view[written:length]
+
+        count = i2s_obj.write(write_view)
         if count is None:
             count = length - written
         if count <= 0:
@@ -232,7 +258,7 @@ def _write_all(i2s_obj, view, length):
 
 
 def _audio_thread():
-    global _write_index, _filled_count
+    global _write_index, _filled_count, underruns
 
     while True:
         _lock.acquire()
@@ -260,6 +286,7 @@ def _audio_thread():
             if bytes_left <= 0:
                 stop()
             else:
+                underruns += 1
                 time.sleep_ms(1)
             continue
 
@@ -277,3 +304,16 @@ def _audio_thread():
 
 def set_vol(vol):
     print("VOL", vol)
+
+
+def stats():
+    print(
+        "underruns:",
+        underruns,
+        "min_free:",
+        min_free,
+        "mem_errors:",
+        memory_errors,
+        "filled:",
+        _filled_count,
+    )
