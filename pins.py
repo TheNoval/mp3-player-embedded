@@ -4,3 +4,6 @@ ENC_A    = 18
 ENC_B    = 17
 ENC_BTN  = 5
 MODE_BTN = 21
+I2S_SCK  = 6
+I2S_WS   = 7
+I2S_SD   = 9

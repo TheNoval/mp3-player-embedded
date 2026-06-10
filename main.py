@@ -7,12 +7,16 @@ import songs
 MC = 0
 MS = 1
 mode = MC
+DISPLAY_UPDATE_MS = 100
+last_display_update = 0
 
 display.startup()
 songs.startup()
 time.sleep(2)
 
 while True:
+    player.update()
+
     d = encoder.read()
 
     if d != 0:
@@ -55,16 +59,22 @@ while True:
         else:
             mode = MC
 
-    if mode == MC:
-        display.control(
-            songs.name(),
-            player.is_playing,
-            player.volume
-        )
-    else:
-        display.songs(
-            songs.song_list,
-            songs.display_current()
-        )
+    now = time.ticks_ms()
+    if (not player.is_playing) and time.ticks_diff(now, last_display_update) >= DISPLAY_UPDATE_MS:
+        if mode == MC:
+            display.control(
+                songs.name(),
+                player.is_playing,
+                player.volume
+            )
+        else:
+            display.songs(
+                songs.song_list,
+                songs.display_current()
+            )
+        last_display_update = now
 
-    time.sleep_ms(5)
+    player.update()
+
+    if not player.is_playing:
+        time.sleep_ms(5)

@@ -46,6 +46,7 @@ MOSI_PIN = 3
 CD_PIN = 4
 
 DEFAULT_MOUNT_POINT = "/sd"
+DEFAULT_SPI_BAUDRATE = 20_000_000
 
 _mounted = False
 _mount_point = DEFAULT_MOUNT_POINT
@@ -62,7 +63,7 @@ def _crc7(buf, n):
 
 
 class SDCard:
-    def __init__(self, spi, cs, baudrate=1320000):
+    def __init__(self, spi, cs, baudrate=DEFAULT_SPI_BAUDRATE):
         self.spi = spi
         self.cs = cs
 
@@ -342,7 +343,7 @@ def _mount_point_is_mounted(mount_point):
         return False
 
 
-def mount(mount_point=DEFAULT_MOUNT_POINT, baudrate=1320000):
+def mount(mount_point=DEFAULT_MOUNT_POINT, baudrate=DEFAULT_SPI_BAUDRATE):
     """Mount the SD card and return the SDCard block device."""
     global _mounted, _mount_point, _sd
 
