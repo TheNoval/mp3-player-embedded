@@ -1,13 +1,5 @@
 # mp3-player-embedded
 An mp3 player made for a prototype board
-
-## Files Needed
-
-| File                       | What It Does                                        |
-| -------------------------- | --------------------------------------------------- |
-| `audio_player_frontend.py` | Main program (this is the file you run)             |
-| `ssd1306.py`               | OLED display driver (must be uploaded to the board) |
-
 ## Setup
 
 1. Connect the board to your computer using a USB cable.
