@@ -18,7 +18,7 @@ def startup():
 
 def control(song, playing, volume):
     oled.fill(0)
-    oled.text("[VOL / PLAY]", 0, 0)
+    oled.text("[Vol / PLAY]", 0, 0)
     oled.text(song[:16], 0, 16)
     if playing:
         oled.text(">> PLAYING", 0, 30)

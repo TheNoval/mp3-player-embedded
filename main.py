@@ -122,6 +122,7 @@ time.sleep(2)
 while True:
     track_play_state()
     handle_encoder()
+    
     player.update(2)
 
     handle_clicks()

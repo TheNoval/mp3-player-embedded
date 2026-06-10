@@ -20,7 +20,6 @@ CHUNK_SIZE = 8192
 BUFFER_COUNT = 4
 GC_LOW_WATER = 8192
 
-
 # Stream state ---------------------------------------------------------------
 
 _filename = None
@@ -115,19 +114,9 @@ def update(max_buffers=2):
         if not _fill_one_buffer():
             break
 
-# def _prime_buffers():
-#     # Fill the ring completely before playback begins, so the consumer never
-#     # sees an empty buffer at song start (the cause of the opening static).
-#     # Calls _fill_one_buffer() directly, bypassing update()'s _loading guard
-#     # since we ARE the loader here. _fill_one_buffer() returns False once the
-#     # ring is full (or the file ends), which ends the loop.
-#     while _fill_one_buffer():
-#         pass
-
 def set_vol(vol):
     global volume
     volume = max(0, min(30, vol))
-
 
 def stats():
     print(
