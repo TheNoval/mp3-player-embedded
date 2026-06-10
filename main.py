@@ -9,6 +9,7 @@ MS = 1
 mode = MC
 
 display.startup()
+songs.startup()
 time.sleep(2)
 
 while True:
@@ -30,22 +31,22 @@ while True:
 
     if clicks == 3:
         songs.prev()
-        player.play(songs.current)
+        player.play(songs.selected_file())
 
     elif clicks == 2:
         songs.next()
-        player.play(songs.current)
+        player.play(songs.selected_file())
 
     elif clicks == 1:
         if mode == MC:
             if player.is_playing:
                 player.pause()
             else:
-                n = songs.current
+                n = songs.selected_file()
                 player.play(n)
         else:
             mode = MC
-            n = songs.current
+            n = songs.selected_file()
             player.play(n)
 
     if encoder.mode_clicked():
@@ -63,7 +64,7 @@ while True:
     else:
         display.songs(
             songs.song_list,
-            songs.current
+            songs.display_current()
         )
 
     time.sleep_ms(5)
