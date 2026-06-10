@@ -64,4 +64,4 @@ def play_wav(path):
 
 
 if __name__ == "__main__":
-    play_wav("/test.wav")
+    play_wav("/tone48.wav")
